@@ -40,7 +40,6 @@ void toonify_widget::initializeGL() {
     auto maj = format.majorVersion();
     auto min = format.minorVersion();
     initializeOpenGLFunctions();
-//    glDebugMessageCallback(debugCallback, nullptr);
 
 //    program = genProgram("../06_HelloTexture/vert.glsl", "../06_HelloTexture/frag.glsl");
 //    glUseProgram(program);
