@@ -13,7 +13,7 @@ class toonify_window : public QMainWindow
 
 public:
     explicit toonify_window(QWidget *parent = nullptr);
-    ~toonify_window();
+    ~toonify_window() override;
 
 private:
     Ui::toonify_window *ui;

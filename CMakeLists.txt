@@ -50,14 +50,31 @@ find_package(Qt5Widgets REQUIRED)
 find_package(Qt5OpenGL REQUIRED)
 find_package(OpenGL REQUIRED)
 
+# OpenGL
+IF (APPLE)
+	INCLUDE_DIRECTORIES(/System/Library/Frameworks)
+	INCLUDE_DIRECTORIES(${GLM_INCLUDE_DIR})
+	FIND_LIBRARY(COCOA_LIBRARY Cocoa)
+	FIND_LIBRARY(GLUT_LIBRARY GLUT)
+	FIND_LIBRARY(OpenGL_LIBRARY OpenGL)
+	MARK_AS_ADVANCED(COCOA_LIBRARY
+			GLUT_LIBRARY
+			OpenGL_LIBRARY)
+	SET(EXTRA_LIBS ${COCOA_LIBRARY} ${GLUT_LIBRARY} ${OpenGL_LIBRARY})
+ENDIF (APPLE)
+add_definitions(-DGL_SILENCE_DEPRECATION)
+
+
 add_executable(
 		toonify
 		main.cpp
 		toonify_window.h toonify_window.cpp toonify_window.ui
+		toonify_widget.h toonify_widget.cpp
 )
 target_include_directories(
 		toonify
 		PRIVATE
+		${CMAKE_SOURCE_DIR}
 		${CMAKE_SOURCE_DIR}/third_party/include
 )
 target_link_libraries(
@@ -65,5 +82,5 @@ target_link_libraries(
 		PUBLIC
 		Qt5::Widgets
 		Qt5::OpenGL
-		#		${OPENGL_LIBRARIES}
+		${OPENGL_LIBRARIES}
 )
