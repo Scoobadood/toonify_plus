@@ -18,6 +18,9 @@ public:
     explicit toonify_widget(QWidget *parent = nullptr,
                             Qt::WindowFlags flags = Qt::WindowFlags());
 
+    ~toonify_widget() override;
+
+
 protected:
     QMatrix4x4 m_projection;
 
@@ -30,6 +33,8 @@ protected:
 private:
     std::vector<QVector3D> m_quad;
     std::vector<GLuint> m_quad_indices;
+
+    QOpenGLDebugLogger * m_debug_logger;
 };
 
 

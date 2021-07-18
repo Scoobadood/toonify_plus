@@ -34,12 +34,23 @@ toonify_widget::toonify_widget(QWidget *parent, Qt::WindowFlags flags)
 {
 }
 
+toonify_widget::~toonify_widget(){
+        delete m_debug_logger;
+}
+
 void toonify_widget::initializeGL() {
 //    glEnable(GL_AMD_debug_output);
     QSurfaceFormat format =  QSurfaceFormat::defaultFormat();
     auto maj = format.majorVersion();
     auto min = format.minorVersion();
     initializeOpenGLFunctions();
+
+    m_debug_logger = new QOpenGLDebugLogger(context());
+    if (m_debug_logger->initialize()) {
+        qDebug() << "GL_DEBUG Debug Logger" << m_debug_logger << "\n";
+        connect(m_debug_logger, SIGNAL(messageLogged(QOpenGLDebugMessage)), this, SLOT(messageLogged(QOpenGLDebugMessage)));
+        m_debug_logger->startLogging();
+    }
 
 //    program = genProgram("../06_HelloTexture/vert.glsl", "../06_HelloTexture/frag.glsl");
 //    glUseProgram(program);
