@@ -7,10 +7,14 @@
 
 #include <QOpenGLWidget>
 #include <QOpenGLFunctions>
+#include <QOpenGLDebugLogger>
+#include <QOpenGLTexture>
 #include <QMatrix4x4>
+#include <QOpenGLFunctions_4_1_Core>
+#include <QOpenGLShaderProgram>
+#include <QOpenGLBuffer>
 
 #include <vector>
-#include <QOpenGLFunctions_4_1_Core>
 
 class toonify_widget : public QOpenGLWidget, QOpenGLFunctions_4_1_Core //
 {
@@ -31,10 +35,27 @@ protected:
     void paintGL() override;
 
 private:
+    void checkGLError(const std::string &context);
+    void initialise_program();
+    void initialise_textures();
+    void initialise_buffers();
+
     std::vector<QVector3D> m_quad;
     std::vector<GLuint> m_quad_indices;
 
-    QOpenGLDebugLogger * m_debug_logger;
+    GLuint m_program;
+
+    GLuint m_texture;
+    QImage * m_source_image;
+
+    GLuint m_vao;
+    GLuint m_vbo;
+    GLuint m_ebo;
+    GLint m_u_image_resolution;
+    GLint m_u_input_image;
+    GLint m_u_bin_width;
+    GLint m_u_psi_q;
+
 };
 
 
