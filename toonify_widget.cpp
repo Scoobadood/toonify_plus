@@ -19,24 +19,20 @@ debug_callback(const QOpenGLDebugMessage &msg) {
 toonify_widget::toonify_widget(QWidget *parent, Qt::WindowFlags flags)
         : QOpenGLWidget(parent, flags) //
         , m_quad{
-                {-0.5f, -0.5f, 0.0f},
-                {0.0f,  0.0f,  0.0f},
-                {-0.5f, +0.5f, 0.0f},
-                {0.0f,  1.0f,  0.0f},
-                {+0.5f, -0.5f, 0.0f},
-                {1.0f,  0.0f,  0.0f},
-                {+0.5f, +0.5f, 0.0f},
-                {1.0f,  1.0f,  0.0f},
+                // Vertex            Colour             Texture
+                -0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f,
+                -0.5f, +0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f,
+                +0.5f, +0.5f, 0.0f,  1.0f, 1.0f, 0.0f,  1.0f, 1.0f,
+                +0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
         } //
         , m_quad_indices{
                 0, 1, 2,
-                1, 2, 3} //
+                0, 2, 3} //
 {
 }
 
 toonify_widget::~toonify_widget() {
     glDeleteTextures(1, &m_texture);
-    delete m_source_image;
 }
 
 void check_shader_compilation(GLuint shader_id) {
@@ -62,7 +58,7 @@ void toonify_widget::initialise_program() {
     check_shader_compilation(vertex_shader);
 
     auto fragment_shader = glCreateShader(GL_FRAGMENT_SHADER);
-    source = (const GLchar *)LUM_QUANT_FRAG_SHADER_SRC.c_str();
+    source = (const GLchar *)DUMMY_FRAG_SHADER.c_str();
     glShaderSource(fragment_shader, 1, &source, nullptr);
     glCompileShader(fragment_shader);
     check_shader_compilation(fragment_shader);
@@ -93,7 +89,7 @@ void toonify_widget::initialise_program() {
     glDetachShader(program, fragment_shader);
 
     m_u_image_resolution = glGetUniformLocation(program, "u_image_resolution");
-    m_u_input_image = glGetUniformLocation(program, "u_input_image");
+    m_u_input_image = glGetUniformLocation(program, "source_image");
     m_u_bin_width = glGetUniformLocation(program, "u_bin_width");
     m_u_psi_q = glGetUniformLocation(program, "u_psi_q");
 
@@ -103,36 +99,49 @@ void toonify_widget::initialise_program() {
 
 void
 toonify_widget::initialise_buffers() {
+    // Create vbo
+    glGenBuffers(1, &m_vbo);
+
     glGenVertexArrays(1, &m_vao);
     glBindVertexArray(m_vao);
 
-    glGenBuffers(1, &m_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glBufferData(GL_ARRAY_BUFFER, m_quad.size() * sizeof(float) * 3, &m_quad[0], GL_STATIC_DRAW);
-
+    glBufferData(GL_ARRAY_BUFFER, m_quad.size() * sizeof(float), m_quad.data(), GL_STATIC_DRAW);
 
     glGenBuffers(1, &m_ebo);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_quad_indices.size() * sizeof(GLuint), &m_quad_indices[0], GL_STATIC_DRAW);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, m_quad_indices.size() * sizeof(GLuint), m_quad_indices.data(), GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(float) * 3, static_cast<void *>(nullptr));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
     checkGLError("initialise_buffers");
 }
 
 void
 toonify_widget::initialise_textures() {
-    glActiveTexture(GL_TEXTURE0);
     glGenTextures(1, &m_texture);
     glBindTexture(GL_TEXTURE_2D, m_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-    m_source_image = new QImage("test.png");
-    glTexStorage2D(GL_TEXTURE_2D, 1, GL_RGBA8, m_source_image->width(), m_source_image->height());
-    glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, m_source_image->width(), m_source_image->height(), GL_BGRA,
-                    GL_UNSIGNED_BYTE, m_source_image->data_ptr());
-
+    QImage image{"test.png"};
+    m_source_image = image.convertToFormat(QImage::Format_RGBA8888);
+    int width = m_source_image.width();
+    int height = m_source_image.height();
+    uchar * data = m_source_image.bits();
+    glTexImage2D(GL_TEXTURE_2D, 0,
+                 GL_RGB, width, height, 0,
+                 GL_RGBA, GL_UNSIGNED_BYTE, data);
+    glGenerateMipmap(GL_TEXTURE_2D);
     checkGLError("initialise_textures");
 }
 
@@ -181,14 +190,19 @@ void toonify_widget::paintGL() {
     glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
 
     glUseProgram(m_program);
-    glUniform2f(m_u_image_resolution, (float) m_source_image->width(), (float) m_source_image->height());
     glUniform1i(m_u_input_image, m_texture);
-    glUniform1f(m_u_bin_width, 5);
-    glUniform1f(m_u_psi_q, 0.5f);
-    checkGLError("Bind program");
-
     glBindVertexArray(m_vao);
-    glDrawArrays(GL_TRIANGLES, 0, 6 );
+
+    glBindTexture(GL_TEXTURE_2D, m_texture);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, 0);
+
+//    glUniform2f(m_u_image_resolution, (float) m_source_image->width(), (float) m_source_image->height());
+//    glUniform1i(m_u_input_image, m_texture);
+//    glUniform1f(m_u_bin_width, 5);
+//    glUniform1f(m_u_psi_q, 0.5f);
+//    checkGLError("Bind program");
+//
+//    glEnableVertexAttribArray(0);
 
     checkGLError("drawElements");
 }

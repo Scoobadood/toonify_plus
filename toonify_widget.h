@@ -40,13 +40,13 @@ private:
     void initialise_textures();
     void initialise_buffers();
 
-    std::vector<QVector3D> m_quad;
+    std::vector<float> m_quad;
     std::vector<GLuint> m_quad_indices;
 
     GLuint m_program;
 
     GLuint m_texture;
-    QImage * m_source_image;
+    QImage m_source_image;
 
     GLuint m_vao;
     GLuint m_vbo;
@@ -55,7 +55,6 @@ private:
     GLint m_u_input_image;
     GLint m_u_bin_width;
     GLint m_u_psi_q;
-
 };
 
 
