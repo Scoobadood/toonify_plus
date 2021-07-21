@@ -20,10 +20,10 @@ toonify_widget::toonify_widget(QWidget *parent, Qt::WindowFlags flags)
         : QOpenGLWidget(parent, flags) //
         , m_quad{
                 // Vertex            Colour             Texture
-                -0.5f, -0.5f, 0.0f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f,
-                -0.5f, +0.5f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f,
-                +0.5f, +0.5f, 0.0f,  1.0f, 1.0f, 0.0f,  1.0f, 1.0f,
-                +0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
+                -1.0f, -1.0f, 0.0f,  0.0f, 0.0f, 0.0f,  0.0f, 0.0f,
+                -1.0f, +1.0f, 0.0f,  1.0f, 0.0f, 0.0f,  0.0f, 1.0f,
+                +1.0f, +1.0f, 0.0f,  1.0f, 1.0f, 0.0f,  1.0f, 1.0f,
+                +1.0f, -1.0f, 0.0f,  0.0f, 1.0f, 0.0f,  1.0f, 0.0f,
         } //
         , m_quad_indices{
                 0, 1, 2,
@@ -125,15 +125,7 @@ toonify_widget::initialise_buffers() {
 }
 
 void
-toonify_widget::initialise_textures() {
-    glGenTextures(1, &m_texture);
-    glBindTexture(GL_TEXTURE_2D, m_texture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-    QImage image{"test.png"};
+toonify_widget::set_image( const QImage& image) {
     m_source_image = image.convertToFormat(QImage::Format_RGBA8888);
     int width = m_source_image.width();
     int height = m_source_image.height();
@@ -142,7 +134,35 @@ toonify_widget::initialise_textures() {
                  GL_RGB, width, height, 0,
                  GL_RGBA, GL_UNSIGNED_BYTE, data);
     glGenerateMipmap(GL_TEXTURE_2D);
+    checkGLError("set image");
+
+    // And now modify the texture coordinates
+    float max_dim = width > height
+            ? (float) width
+            : (float ) height;
+    auto tex_width = (float) width / max_dim;
+    auto tex_height = (float) height / max_dim;
+    m_quad[6] = m_quad[14] = (1.0f - tex_width) * 0.5f;
+    m_quad[7] = m_quad[31] = (1.0f + tex_height) *0.5f;
+    m_quad[22] = m_quad[30] = (1.0f + tex_width) * 0.5f;
+    m_quad[23] = m_quad[15] = (1.0f - tex_height) * 0.5f;
+
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glBufferData(GL_ARRAY_BUFFER, m_quad.size() * sizeof(float), m_quad.data(), GL_STATIC_DRAW);
+}
+
+void
+toonify_widget::initialise_textures() {
+    glGenTextures(1, &m_texture);
+    glBindTexture(GL_TEXTURE_2D, m_texture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     checkGLError("initialise_textures");
+
+    QImage image{"test.png"};
+    set_image(image);
 }
 
 void toonify_widget::initializeGL() {

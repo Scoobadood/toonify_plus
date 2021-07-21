@@ -39,6 +39,7 @@ private:
     void initialise_program();
     void initialise_textures();
     void initialise_buffers();
+    void set_image( const QImage& image);
 
     std::vector<float> m_quad;
     std::vector<GLuint> m_quad_indices;
