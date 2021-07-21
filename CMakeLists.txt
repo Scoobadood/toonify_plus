@@ -70,6 +70,7 @@ add_executable(
 		main.cpp
 		toonify_window.h toonify_window.cpp toonify_window.ui
 		toonify_widget.h toonify_widget.cpp
+		toonify_autogen/include/ui_toonify_window.h
 )
 target_include_directories(
 		toonify
